@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Drive API Quickstart</title>
+    <meta charset="utf-8" />
+    <style>
+      body {
+          width: 800px;
+          height: 550px;
+          margin: 0;
+          padding-top: 20px;
+      }
+      .heading {
+          display: flex;
+          justify-content: center;
+          font-size: large;
+          font-weight: 800;
+      }
+      .videoContainer {
+          display: flex;
+          justify-content: center;
+      }
+      video {
+          width : 500px !important;
+          height: auto;
+      }
+      #buttonContainer {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          margin-top: 30px;
+      }
+      #buttonContainer a {
+          width: 250px;
+          height: 50px;
+          background-color: blueviolet;
+          cursor: pointer;
+          border: none;
+          color: white;
+          font-size: medium;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+      }
+      a {
+          text-decoration: none;
+      }
+  </style>
+  </head>
+  <body>
+    <p>Drive API Quickstart</p>
+
+    <!--Add buttons to initiate auth sequence and sign out-->
+    <button id="authorize_button" onclick="handleAuthClick()">Authorize</button>
+    <button id="signout_button" onclick="handleSignoutClick()">Sign Out</button>
+
+    <p class="heading">Screen Recorder</p>
+    <div class="videoContainer">
+        <video id="screenMain" autoplay controls></video>
+    </div>
+    <div id="buttonContainer">
+        <a id="startRecording">Start Recording</a>
+    </div>
+
+    <input type="file" id="files" name="file">
+
+    <pre id="content" style="white-space: pre-wrap;"></pre>
+
+    <script type="text/javascript">
+      /* exported gapiLoaded */
+      /* exported gisLoaded */
+      /* exported handleAuthClick */
+      /* exported handleSignoutClick */
+
+      // TODO(developer): Set to client ID and API key from the Developer Console
+      const CLIENT_ID = '846991818923-s1j9e6ka8tel0in38mn9oi65uo7fnvqi.apps.googleusercontent.com';
+      const API_KEY = 'AIzaSyDlLCs6_XGt5FKPmCz3QJPg10_kM_B0BlU';
+
+      // Discovery doc URL for APIs used by the quickstart
+      const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+
+      // Authorization scopes required by the API; multiple scopes can be
+      // included, separated by spaces.
+      const SCOPES = 'https://www.googleapis.com/auth/drive.metadata';
+
+      let tokenClient;
+      let gapiInited = false;
+      let gisInited = false;
+
+      document.getElementById('authorize_button').style.visibility = 'hidden';
+      document.getElementById('signout_button').style.visibility = 'hidden';
+
+      /**
+       * Callback after api.js is loaded.
+       */
+      function gapiLoaded() {
+        gapi.load('client', initializeGapiClient);
+      }
+
+      /**
+       * Callback after the API client is loaded. Loads the
+       * discovery doc to initialize the API.
+       */
+      async function initializeGapiClient() {
+        await gapi.client.init({
+          apiKey: API_KEY,
+          discoveryDocs: [DISCOVERY_DOC],
+        });
+        gapiInited = true;
+        maybeEnableButtons();
+      }
+
+      /**
+       * Callback after Google Identity Services are loaded.
+       */
+      function gisLoaded() {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: SCOPES,
+          callback: '', // defined later
+        });
+        gisInited = true;
+        maybeEnableButtons();
+      }
+
+      /**
+       * Enables user interaction after all libraries are loaded.
+       */
+      function maybeEnableButtons() {
+        if (gapiInited && gisInited) {
+          document.getElementById('authorize_button').style.visibility = 'visible';
+        }
+      }
+
+      /**
+       *  Sign in the user upon button click.
+       */
+      function handleAuthClick() {
+        tokenClient.callback = async (resp) => {
+          if (resp.error !== undefined) {
+            throw (resp);
+          }
+          document.getElementById('signout_button').style.visibility = 'visible';
+          document.getElementById('authorize_button').innerText = 'Refresh';
+          await listFiles();
+          // await uploadFile();
+        };
+
+        if (gapi.client.getToken() === null) {
+          // Prompt the user to select a Google Account and ask for consent to share their data
+          // when establishing a new session.
+          tokenClient.requestAccessToken({prompt: 'consent'});
+        } else {
+          // Skip display of account chooser and consent dialog for an existing session.
+          tokenClient.requestAccessToken({prompt: ''});
+        }
+      }
+
+      /**
+       *  Sign out the user upon button click.
+       */
+      function handleSignoutClick() {
+        const token = gapi.client.getToken();
+        if (token !== null) {
+          google.accounts.oauth2.revoke(token.access_token);
+          gapi.client.setToken('');
+          document.getElementById('content').innerText = '';
+          document.getElementById('authorize_button').innerText = 'Authorize';
+          document.getElementById('signout_button').style.visibility = 'hidden';
+        }
+      }
+
+      /**
+       * Print metadata for first 10 files.
+       */
+      async function listFiles() {
+        let response;
+        try {
+          response = await gapi.client.drive.files.list({
+            'pageSize': 10,
+            'fields': 'files(id, name)',
+          });
+        } catch (err) {
+          document.getElementById('content').innerText = err.message;
+          return;
+        }
+        const files = response.result.files;
+        if (!files || files.length == 0) {
+          document.getElementById('content').innerText = 'No files found.';
+          return;
+        }
+        // Flatten to string to display
+        const output = files.reduce(
+            (str, file) => `${str}${file.name} (${file.id}\n`,
+            'Files:\n');
+        document.getElementById('content').innerText = output;
+      }
+
+      async function uploadFile(file, fileName) {
+        var fileContent = file; // As a sample, upload a text file.
+        // var file = new Blob([fileContent], { type: 'text/plain' });
+        var metadata = {
+          'name': fileName, // Filename at Google Drive
+          'mimeType': 'video/mp.4', // mimeType at Google Drive
+          // TODO [Optional]: Set the below credentials
+          // Note: remove this parameter, if no target is needed
+          'parents': ['1lBiQI_3BxF2IcnMvoTDC7pAur6brKrtB'], // Folder ID at Google Drive which is optional
+        };
+
+        var accessToken = gapi.auth.getToken().access_token; // Here gapi is used for retrieving the access token.
+        var form = new FormData();
+        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+        form.append('file', file);
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('post', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id');
+        xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
+        xhr.responseType = 'json';
+        xhr.onload = () => {
+          document.getElementById('content').innerHTML = "File uploaded successfully. The Google Drive file id is <b>" + xhr.response.id + "</b>";
+          document.getElementById('content').style.display = 'block';
+        };
+        xhr.send(form);
+      }
+
+      function formatBytes(bytes, decimals = 2) {
+    if (!+bytes) return '0 Bytes'
+
+    const k = 1024
+    const dm = decimals < 0 ? 0 : decimals
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`
+}
+
+// function uploadFileToDrive () {
+    
+// }
+
+const startStream = async () => {
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+        video : {
+            mediaSource : "screen"
+        }
+    });
+    const data = [];
+
+    const mediaRecorder = new MediaRecorder(stream);
+
+    mediaRecorder.ondataavailable = (e) => {
+        data.push(e.data);
+    }
+    mediaRecorder.start();
+    mediaRecorder.onstop = (e) => {
+        var mediaBlob = new Blob(data, {
+            type : data[0].type,
+        });
+        
+        const myFile = new File(
+            [mediaBlob],
+            "demo.mp4",
+            { type: 'video/mp4' }
+        );
+
+        var video = URL.createObjectURL(myFile);
+        document.querySelector('video').src = video;
+        var fileName = myFile.lastModified;
+        var size = myFile.size;
+        
+        var a = window.document.createElement('a');
+        a.innerHTML = "Download (" + formatBytes(size) + ")";
+        a.href = video;
+        a.download = fileName + '.mp4';
+        document.getElementById('startRecording').style.display = 'none';
+        document.getElementById('buttonContainer').appendChild(a);
+
+        uploadFile(myFile, fileName);
+        // uploadFileToDrive();
+        
+        // fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        //     method: 'POST',
+        //     headers: new Headers({'Authorization': 'Bearer ' + gapi.auth.getToken().access_token}),
+        //     body: video
+        // }).then(res => res.json()).then(res => console.log(res));
+    }
+}
+document.getElementById('startRecording').addEventListener('click', startStream, false);
+    </script>
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+  </body>
+</html>
