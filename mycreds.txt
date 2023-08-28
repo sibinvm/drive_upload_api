@@ -1,0 +1,12 @@
+{"access_token": "ya29.a0AbVbY6OgU_0HwvlnjqZrGFPUermHncrnkfu_jfgLoRHgAbwcAdkxaHh1QBQV9BVCqFUFcR8DYezqI3ZX_mezODkPTlIozoFczNgv3TtSdFCvYnxOUCHPt7RKIfSubhJDKKXCeFvgzL8ff6GrmLlRi3vn4HNzaCgYKAaYSARESFQFWKvPlVnLYuE98gEZF-NmUQ7S2QA0163", "client_id": "846991818923-s1j9e6ka8tel0in38mn9oi65uo7fnvqi.apps.googleusercontent.com", "client_secret": "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", "refresh_token": "1//0g8-7qiEXq4ftCgYIARAAGBASNwF-L9IrwAJhYuL-G_AhvzRXanbGFgrvud4lojkxSXzGK6fquZ5PNZfGuWsmYIcH5jrfehQl00o", "token_expiry": "2023-07-08T17:57:06Z", "token_uri": "https://oauth2.googleapis.com/token", "user_agent": null, "revoke_uri": "https://oauth2.googleapis.com/revoke", "id_token": null, "id_token_jwt": null, "token_response": {"access_token": "ya29.a0AbVbY6OgU_0HwvlnjqZrGFPUermHncrnkfu_jfgLoRHgAbwcAdkxaHh1QBQV9BVCqFUFcR8DYezqI3ZX_mezODkPTlIozoFczNgv3TtSdFCvYnxOUCHPt7RKIfSubhJDKKXCeFvgzL8ff6GrmLlRi3vn4HNzaCgYKAaYSARESFQFWKvPlVnLYuE98gEZF-NmUQ7S2QA0163", "expires_in": 3599, "refresh_token": "1//0g8-7qiEXq4ftCgYIARAAGBASNwF-L9IrwAJhYuL-G_AhvzRXanbGFgrvud4lojkxSXzGK6fquZ5PNZfGuWsmYIcH5jrfehQl00o", "scope": "https://www.googleapis.com/auth/drive", "token_type": "Bearer"}, "scopes": ["https://www.googleapis.com/auth/drive"], "token_info_uri": "https://oauth2.googleapis.com/tokeninfo", "invalid": false, "_class": "OAuth2Credentials", "_module": "oauth2client.client"}
+
+cursor = mysql.connection.cursor()
+    cursor.execute('''select first_name from users where email=%s limit 1''', ('webdeveloper@gmail.com',))
+    user = cursor.fetchone()
+
+    gauth = GoogleAuth()
+
+    if user is not None:
+        gauth.Authorize(user[0])
+        return str(user[0])
+    else:
